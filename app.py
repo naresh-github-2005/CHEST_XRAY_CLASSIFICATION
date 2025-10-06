@@ -7,7 +7,7 @@ import numpy as np
 import os
 import gdown  # install via requirements
 from torchvision.models import resnet50
-
+from tqdm import tqdm
 
 # -----------------------
 # Config
@@ -35,8 +35,6 @@ if not os.path.exists(MODEL_PATH):
 # -----------------------
 # Load model
 # -----------------------
-
-NUM_CLASSES = 15
 model = resnet50(weights=None)  # do not load ImageNet weights
 model.fc = torch.nn.Linear(model.fc.in_features, NUM_CLASSES)
 
@@ -46,7 +44,6 @@ model.load_state_dict(checkpoint['model_state'])  # <-- use 'model_state' key
 
 model.to(DEVICE)
 model.eval()
-
 
 # -----------------------
 # Transform
@@ -64,13 +61,22 @@ transform = transforms.Compose([
 st.title("Chest X-ray: Normal vs Abnormal Detection")
 st.write("Upload chest X-ray images and get predictions with confidence scores.")
 
-uploaded_files = st.file_uploader("Upload X-ray images", type=["jpg","png","jpeg"], accept_multiple_files=True)
+uploaded_files = st.file_uploader(
+    "Upload X-ray images", type=["jpg","png","jpeg"], accept_multiple_files=True
+)
 threshold = st.slider("Confidence threshold", 0.1, 0.99, 0.5, 0.01)
 
 if uploaded_files:
     results = []
-    for file in uploaded_files:
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    for i, file in enumerate(uploaded_files):
         img = Image.open(file).convert("RGB")
+
+        # Display thumbnail
+        st.image(img, caption=f"Uploaded: {file.name}", width=200)
+
         x = transform(img).unsqueeze(0).to(DEVICE)
 
         with torch.no_grad():
@@ -104,10 +110,18 @@ if uploaded_files:
             "Top 3 Abnormal Classes": top3_str
         })
 
+        # Update progress bar
+        progress = (i + 1) / len(uploaded_files)
+        progress_bar.progress(progress)
+        status_text.text(f"Processing {i+1}/{len(uploaded_files)} images...")
+
+    progress_bar.empty()
+    status_text.text("✅ All images processed!")
+
+    # Display results
     df = pd.DataFrame(results)
     st.dataframe(df)
 
     # CSV download
     csv = df.to_csv(index=False).encode('utf-8')
     st.download_button("Download Predictions as CSV", csv, "predictions.csv", "text/csv")
-
