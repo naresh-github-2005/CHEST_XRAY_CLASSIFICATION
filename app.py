@@ -11,7 +11,7 @@ import gdown  # install via requirements
 # Config
 # -----------------------
 MODEL_GDRIVE_ID = "1zdgE_-yk-SGnSFRDlxzV12QPcCOX0Kux"  # <-- replace with your file's ID
-MODEL_PATH = "resnet50_multilabel_final.pth"
+MODEL_PATH = "resnet50_multilabel_best.pth"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 NUM_CLASSES = 15
@@ -53,7 +53,7 @@ transform = transforms.Compose([
 # Streamlit UI
 # -----------------------
 st.title("Chest X-ray: Normal vs Abnormal Detection")
-st.write("Upload chest X-ray images and get prediction with confidence score.")
+st.write("Upload chest X-ray images and get predictions with confidence scores.")
 
 uploaded_files = st.file_uploader("Upload X-ray images", type=["jpg","png","jpeg"], accept_multiple_files=True)
 threshold = st.slider("Confidence threshold", 0.1, 0.99, 0.5, 0.01)
@@ -70,6 +70,8 @@ if uploaded_files:
         # Normal vs Abnormal logic
         no_finding_prob = probs[14]
         abnormal_probs = np.delete(probs, 14)
+        abnormal_classes = np.array(CLASS_NAMES[:-1])
+
         if no_finding_prob >= threshold:
             label = "Normal"
             confidence = no_finding_prob
@@ -80,10 +82,17 @@ if uploaded_files:
             label = "Normal (low confidence)"
             confidence = no_finding_prob
 
+        # Top 3 abnormal predictions
+        top3_idx = abnormal_probs.argsort()[-3:][::-1]
+        top3_classes = abnormal_classes[top3_idx]
+        top3_probs = abnormal_probs[top3_idx]
+        top3_str = ", ".join([f"{c} ({p:.2f})" for c, p in zip(top3_classes, top3_probs)])
+
         results.append({
             "Filename": file.name,
             "Label": label,
-            "Confidence": float(confidence)
+            "Confidence": float(confidence),
+            "Top 3 Abnormal Classes": top3_str
         })
 
     df = pd.DataFrame(results)
