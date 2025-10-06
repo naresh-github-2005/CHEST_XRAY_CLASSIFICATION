@@ -6,6 +6,8 @@ import pandas as pd
 import numpy as np
 import os
 import gdown  # install via requirements
+from torchvision.models import resnet50
+
 
 # -----------------------
 # Config
@@ -33,11 +35,18 @@ if not os.path.exists(MODEL_PATH):
 # -----------------------
 # Load model
 # -----------------------
-model = models.resnet50()
+
+NUM_CLASSES = 15
+model = resnet50(weights=None)  # do not load ImageNet weights
 model.fc = torch.nn.Linear(model.fc.in_features, NUM_CLASSES)
-model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
+
+# Load the checkpoint dictionary
+checkpoint = torch.load(MODEL_PATH, map_location=DEVICE)
+model.load_state_dict(checkpoint['model_state'])  # <-- use 'model_state' key
+
 model.to(DEVICE)
 model.eval()
+
 
 # -----------------------
 # Transform
@@ -101,3 +110,4 @@ if uploaded_files:
     # CSV download
     csv = df.to_csv(index=False).encode('utf-8')
     st.download_button("Download Predictions as CSV", csv, "predictions.csv", "text/csv")
+
