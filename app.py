@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import List, Tuple, Optional
 import tempfile
+from gradcam_util import compute_gradcam_overlay
 
 import streamlit as st
 import numpy as np
@@ -17,10 +18,10 @@ import torch.nn as nn
 from torchvision import transforms
 from torchvision.models import resnet50, ResNet50_Weights
 
-# grad-cam
-from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-from pytorch_grad_cam.utils.image import show_cam_on_image
+# # grad-cam
+# from pytorch_grad_cam import GradCAM
+# from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+# from pytorch_grad_cam.utils.image import show_cam_on_image
 
 # download helpers
 import requests
@@ -256,8 +257,9 @@ if uploaded:
             sel = st.selectbox("Select class to visualize", options=list(range(len(labels))), format_func=lambda x: labels[x], key=u.name)
             if st.button(f"Generate Grad-CAM ({u.name})"):
                 try:
-                    vis = compute_gradcam_overlay(model, input_tensor, sel, resize_hw=(224,224))
-                    st.image(vis, caption=f"Grad-CAM: {labels[sel]}", use_column_width=True)
+                    input_tensor = preprocess_image_pil(img, val_transform).to(device)  # 1,C,H,W
+                    vis = compute_gradcam_overlay(model, input_tensor, sel_cls, resize_hw=(224,224))
+                    st.image(vis, caption=f"Grad-CAM: {labels[sel_cls]}", use_column_width=True)
                 except Exception as e:
                     st.error(f"Grad-CAM failed: {e}")
 
@@ -270,3 +272,4 @@ if uploaded:
     df = pd.DataFrame(results).set_index("filename")
     st.dataframe(df)
     st.download_button("Download CSV", df.to_csv().encode(), file_name="predictions.csv", mime="text/csv")
+
