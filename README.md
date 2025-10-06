@@ -59,9 +59,10 @@ A **ResNet-50** model was trained on the **VinBigData Chest X-ray Abnormalities 
 ### 1️⃣ Clone the Repository
 ```bash
 git clone https://github.com/<your-username>/chest-xray-classification.git
-cd chest-xray-classification```
+cd chest-xray-classification
 
-2️⃣ Create Virtual Environment
+### 2️⃣ Create Virtual Environment
+```bash
 python -m venv venv
 venv\Scripts\activate   # (Windows)
 # OR
